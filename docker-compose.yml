@@ -1,0 +1,150 @@
+services:
+  # Contenedor 1: La Base de Datos PostgreSQL de Abaco360
+  postgres-db-jm:
+    build:
+      context: .
+      dockerfile: ./dockerfile/db/Dockerfile
+    container_name: postgres-db-jm
+    env_file:
+      - .env
+    image: postgres-db-jm:dev # Opcional: etiqueta distintiva
+    restart: unless-stopped
+    # user: root # Opcional/Recomendado quitar para más seguridad si no es necesario
+    networks:
+      - red_jaramillomora
+    ports:
+      - "5453:5432"
+
+    environment:
+      POSTGRES_USER: ${DB_USER:-jaramillomora}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-d3s4rr0ll0123}
+      POSTGRES_DB: ${DB_DATABASE:-desarrollo}
+      POSTGRES_INITDB_ARGS: "--data-checksums --encoding=UTF8 --locale=es_CO.UTF-8"
+      TZ: America/Bogota
+    volumes:
+      # Volumen gestionado por Docker, no requiere pre-configuración en el host
+      - postgres_data:/var/lib/postgresql/data
+      # 🚀 Aquí montamos el script de inicialización:
+      - ./init-scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./backups:/backups # Directorio para backups
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-jaramillomora} -d ${DB_DATABASE:-desarrollo}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Configuraciones de rendimiento para desarrollo (simplificadas y optimizadas)
+    command: >
+      postgres -c max_connections=200 -c shared_buffers=256MB -c effective_cache_size=1GB -c maintenance_work_mem=128MB -c checkpoint_completion_target=0.9 -c wal_buffers=16MB -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=200 -c work_mem=26214kB -c min_wal_size=1GB -c max_wal_size=4GB
+
+  # Contenedor 2: Redis - El cerebro de caché y sesiones
+  # Escucha en 6390 (redis/redis.conf). redis-cli usa 6379 por defecto: el healthcheck DEBE indicar -p 6390.
+  redis-cache-jm:
+    image: redis:alpine3.23
+    container_name: redis-cache-jm
+    restart: unless-stopped
+    networks:
+      - red_jaramillomora
+    ports:
+      - "${REDIS_PORT:-6390}:6390"
+    environment:
+      TZ: America/Bogota
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      # Bind mounts directos (más fiables que named volumes con device relativo)
+      - ${REDIS_DATA_PATH:-./redis/data}:/data
+      - ${REDIS_LOGS_PATH:-./redis/logs}:/var/log/redis
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD:-redis123}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+      --logfile /var/log/redis/redis.log
+    healthcheck:
+      # Puerto 6390 = port en redis.conf (NO el 6379 por defecto de redis-cli)
+      test: [ "CMD", "redis-cli", "-p", "6390", "--raw", "-a", "${REDIS_PASSWORD:-redis123}", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
+
+  redis-commander-jm:
+    image: rediscommander/redis-commander:latest
+    container_name: redis_commander_jm
+    restart: unless-stopped
+    networks:
+      - red_jaramillomora
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8091}:8081"
+    environment:
+      # ✅ Opción 1: Variables individuales (RECOMENDADA)
+      - REDIS_HOST=${REDIS_HOST_DOCKER:-redis-cache-jm}
+      - REDIS_PORT=${REDIS_PORT:-6390}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - REDIS_DB=${REDIS_DB:-0}
+      # Opción 2: Formato único (descomentar si prefieres)
+      # - REDIS_HOSTS=local:redis-cache:6379:0:${REDIS_PASSWORD:-redis123}
+      - TZ=America/Bogota
+    depends_on:
+      redis-cache-jm:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  # Contenedor 3: La API de Jaramillo Mora
+  api-auth-jm:
+    build:
+      context: .
+      dockerfile: ./dockerfile/api/Dockerfile
+      target: development
+    container_name: api-auth-jm
+    image: api-auth-jm:dev
+    networks:
+      - red_jaramillomora
+    env_file:
+      - .env
+    environment:
+      # Sobrescribe .env del host: dentro de la red Compose no existe "localhost" de otros servicios
+      REDIS_HOST: redis-cache-jm
+      REDIS_PORT: ${REDIS_PORT:-6390}
+      DB_HOST: postgres-db-jm
+      DB_PORT: 5432
+      DATABASE_URL: postgres://${DB_USER:-jaramillomora}:${DB_PASSWORD:-d3s4rr0ll0123}@postgres-db-jm:5432/${DB_DATABASE:-desarrollo}?schema=public
+      # Debe coincidir con el puerto publicado abajo
+      SERVER_PORT: 3050
+      HOST: 0.0.0.0
+    ports:
+      - "3050:3050"
+    volumes:
+      - .:/var/node/app
+      - /var/node/app/node_modules
+    depends_on:
+      postgres-db-jm:
+        condition: service_healthy
+      redis-cache-jm:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+
+volumes:
+  postgres_data:
+    driver: local
+    name: postgres_jm_local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${POSTGRES_DATA_PATH}
+
+networks:
+  red_jaramillomora:
+    driver: bridge

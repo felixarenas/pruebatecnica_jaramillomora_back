@@ -1,0 +1,158 @@
+## ========================= Docker ==========================================
+ 
+# Levantar contenedores docker
+docker-compose up -d
+
+# Destruye todos los contenedores del docker-compose
+docker-compose down
+
+# Muestra el log de todos los contenedores del docker-compose
+docker-compose logs -f
+
+# Generar bk de toda la base de datos
+
+docker exec -it api-auth-jm sh -c "$(cat backup_db.sh)"
+
+docker exec -t postgres-db-jm pg_dump -U jaramillomora -d desarrollo > ./backups/bk_database.sql
+
+# Restaurar bk de toda la base de datos
+
+docker exec -it api-auth-jm sh -c "$(cat restore_db.sh)"
+
+docker exec -t postgres-db-jm pg_restore -U jaramillomora -d desarrollo -Fc ./backups/bk_database.sql
+
+==============================================================================
+
+
+## ========================= Redis ==========================================
+
+# Ver logs de Redis
+docker-compose logs -f redis-cache-jm
+
+
+
+# Probar conexión a Redis
+docker exec -it redis-cache-jm redis-cli -a redis123 ping
+# Debería responder: PONG
+
+# Inspeccionar Redis
+docker exec -it redis-cache-jm redis-cli -a redis123 INFO stats
+
+# Monitoreo en tiempo real
+docker exec -it redis-cache-jm redis-cli -a redis123 --stat
+
+# Limpiar toda la caché de Redis
+docker exec -it redis-cache-jm redis-cli -a redis123 FLUSHDB
+
+# Ver estadísticas de memoria
+docker exec -it redis-cache-jm redis-cli -a redis123 INFO memory
+
+# Backup manual de Redis
+docker exec -it redis-cache-jm redis-cli -a redis123 BGSAVE
+
+# Ver keys por patrón
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "session:*"
+
+# Monitorear comandos en tiempo real
+docker exec -it redis-cache-jm redis-cli -a redis123 MONITOR
+
+# Ver todas las keys (cuidado en producción ADVERTENCIA: KEYS * escanea TODAS las keys y puede bloquear Redis si tienes muchas. NO uses en producción con miles de keys.)
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "*"
+
+# Ver TTL de una key específica
+docker exec -it redis-cache-jm redis-cli -a redis123 TTL "mi:key"
+
+# Monitorear en tiempo real
+docker exec -it redis-cache-jm redis-cli -a redis123 MONITOR
+
+# Estadísticas de caché
+docker exec -it redis-cache-jm redis-cli -a redis123 INFO stats
+
+
+# Keys que empiezan con "session:"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "session:*"
+
+# Keys que empiezan con "cache:"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "cache:*"
+
+# Keys que contienen "user"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "*user*"
+
+# Keys de un patrón específico (ej: abaco:*)
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "abaco:*"
+
+
+## Usar SCAN (MÁS SEGURO para producción)
+
+# Escaneo básico (cursor 0 = empezar)
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0
+
+# Escaneo con patrón
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0 MATCH "session:*"
+
+# Escaneo con conteo (100 keys por iteración)
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0 MATCH "cache:*" COUNT 100
+
+# Escaneo completo (script)
+docker exec -it redis-cache-jm redis-cli -a redis123 --scan --pattern "abaco:*"
+
+## Comandos para inspeccionar keys (ADVERTENCIA: KEYS * escanea TODAS las keys y puede bloquear Redis si tienes muchas. NO uses en producción con miles de keys.)
+
+#Ver el tipo de una key
+docker exec -it redis-cache-jm redis-cli -a redis123 TYPE "mi:key"
+
+## Ver el TTL (tiempo de vida) de una key
+
+# TTL en segundos
+docker exec -it redis-cache-jm redis-cli -a redis123 TTL "mi:key"
+
+# TTL en milisegundos
+docker exec -it redis-cache-jm redis-cli -a redis123 PTTL "mi:key"
+
+## Listar keys con un patrón específico (RECOMENDADO)
+
+# Keys que empiezan con "session:"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "session:*"
+
+# Keys que empiezan con "cache:"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "cache:*"
+
+# Keys que contienen "user"
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "*user*"
+
+# Keys de un patrón específico (ej: abaco:*)
+docker exec -it redis-cache-jm redis-cli -a redis123 KEYS "abaco:*"
+
+## Usar SCAN (MÁS SEGURO para producción)
+
+# Escaneo básico (cursor 0 = empezar)
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0
+
+# Escaneo con patrón
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0 MATCH "session:*"
+
+# Escaneo con conteo (100 keys por iteración)
+docker exec -it redis-cache-jm redis-cli -a redis123 SCAN 0 MATCH "cache:*" COUNT 100
+
+# Escaneo completo (script)
+docker exec -it redis-cache-jm redis-cli -a redis123 --scan --pattern "abaco:*"
+
+
+## Ver el valor de una key
+
+# Para strings
+docker exec -it redis-cache-jm redis-cli -a redis123 GET "mi:key"
+
+# Para hashes
+docker exec -it redis-cache-jm redis-cli -a redis123 HGETALL "mi:hash"
+
+# Para listas
+docker exec -it redis-cache-jm redis-cli -a redis123 LRANGE "mi:lista" 0 -1
+
+# Para sets
+docker exec -it redis-cache-jm redis-cli -a redis123 SMEMBERS "mi:set"
+
+# Para JSON (si usas RedisJSON)
+docker exec -it redis-cache-jm redis-cli -a redis123 JSON.GET "mi:json"
+
+==============================================================================

@@ -1,13 +1,21 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
+import { AppModule } from './app.module';
 import { envs, logger } from './core/config';
 import { GlobalExceptionFilter } from './core/exceptions/global-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // bodyParser: false → registramos límites custom (PDFs/IFC en base64 superan el default ~100kb)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
   app.enableShutdownHooks();
+
+  app.use(json({ limit: envs.BODY_LIMIT }));
+  app.use(urlencoded({ extended: true, limit: envs.BODY_LIMIT }));
 
   app.setGlobalPrefix('api/v1/'); //para prefijo global
   app.useGlobalPipes(
@@ -38,5 +46,6 @@ async function bootstrap() {
   await app.listen(envs.SERVER_PORT); //para iniciar el servidor
   logger.successEnv('Application is running on:', `http://${envs.HOST}:${envs.SERVER_PORT}`);
   logger.successEnv('Database is running on port:', `${envs.DB_PORT}`);
+  logger.successEnv('Body size limit:', envs.BODY_LIMIT);
 }
 bootstrap();

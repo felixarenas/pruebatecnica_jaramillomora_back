@@ -1,0 +1,5 @@
+# Storage de archivos generados por la aplicación.
+# Los archivos se crean vía AdminFile (src/core/admin-file).
+# No versionar el contenido; solo esta carpeta.
+*
+!.gitkeep

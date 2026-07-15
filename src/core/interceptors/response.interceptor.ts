@@ -13,7 +13,7 @@ import { ApiResponsePayload } from '../interfaces/api-response-payload.interface
 
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, IApiResponse<T>> {
-    constructor(private readonly reflector: Reflector) {}
+    constructor(private readonly reflector: Reflector) { }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<IApiResponse<T>> {
         const ctx = context.switchToHttp();

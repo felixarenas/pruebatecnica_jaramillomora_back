@@ -31,4 +31,6 @@ export const envs = {
     REDIS_COMMANDER_PORT: env.get('REDIS_COMMANDER_PORT').default('8081').asPortNumber(),
     REDIS_TTL: env.get('REDIS_TTL').default('86400').asInt(),
     REDIS_MAX_ITEMS: env.get('REDIS_MAX_ITEMS').default('1000').asInt(),
+    /** Límite del body JSON/urlencoded (archivos base64 IFC/PDF). Ej: 50mb */
+    BODY_LIMIT: env.get('BODY_LIMIT').default('').asString(),
 }

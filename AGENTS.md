@@ -52,8 +52,9 @@ backend/
 ├── src/
 │   ├── main.ts               # Bootstrap, ValidationPipe, Swagger, filtros
 │   ├── app.module.ts         # Prisma, Users, Clientes, Servicios, Redis
-│   ├── core/                 # Transversal (config, redis, guards, filters…)
-│   └── modules/              # Feature modules (dominio)
+│   ├── core/                 # Transversal (config, redis, admin-file, guards, filters…)
+│   ├── modules/              # Feature modules (dominio)
+│   └── storage/              # Archivos persistidos por AdminFile (no versionar contenido)
 ├── prisma/                   # schema.prisma, PrismaModule
 ├── dockerfile/api|db/        # Multi-stage API + Postgres init
 ├── docker-compose.yml
@@ -92,14 +93,16 @@ Tras crear un módulo nuevo: importarlo en `src/app.module.ts`.
 
 | Área | Ruta | Uso |
 |------|------|-----|
-| Envs | `src/core/config/envs.ts` | Variables tipadas; añadir aquí nuevas keys |
+| Envs | `src/core/config/envs.ts` | Variables tipadas; añadir aquí nuevas keys (`BODY_LIMIT` para base64) |
 | Auth JWT | `src/core/config/auth.module/` | Global; importar en features que protegen rutas |
 | Guard | `src/core/guards/jwt-auth.guard.ts` | `@UseGuards(JwtAuthGuard)` + `@ApiBearerAuth` |
 | Filter | `src/core/exceptions/global-exception.filter.ts` | Ya global en `main.ts` |
 | Interceptor | `src/core/interceptors/response.interceptor.ts` | Ya global en `AppModule` |
 | Redis | `src/core/redis/` | `RedisModule` global; inyectar `RedisService` |
+| AdminFile | `src/core/admin-file/` | `AdminFileModule` global; `adminFile.create(datoJson, ruta)` |
 | Prisma app service | `src/core/database/prisma.service.ts` | Usado vía `PrismaModule` en raíz `prisma/` |
 | Validators | `src/core/validators/` | Reutilizar en DTOs |
+| Storage | `src/storage/` | Archivos creados por `AdminFile` (contenido no versionado) |
 
 ---
 
@@ -128,6 +131,7 @@ Base: `/api/v1/`
 | Users | `GET users/findbyid`, `findbyemail`; `PATCH users/update_users` |
 | Clientes | CRUD + `gettiposidentity`, búsquedas por id/identity |
 | Servicios | CRUD + tipos + por cliente |
+| Process IFC | `POST process-ifc` (base64 → archivo en `src/storage`) |
 
 Detalle exacto de paths: leer controllers respectivos o Swagger en runtime.
 
@@ -142,6 +146,8 @@ Detalle exacto de paths: leer controllers respectivos o Swagger en runtime.
 - Login JWT + guard.
 - Infra Docker Compose: Postgres (`5453→5432`), Redis (`6390`), API dev (`3050`), Redis Commander (profile `tools`).
 - `RedisModule` / `RedisService` (set/get/del/remember/increment).
+- `AdminFileModule` / `AdminFile.create(datoJson, ruta)` para persistir archivos base64.
+- Módulo `process-ifc`: `POST api/v1/process-ifc` → almacena IFC (u otra ext) en `src/storage`.
 - Embed de README en build (`docs:build` → `src/core/docs/readme.generated.ts`).
 
 ### Huecos / riesgos (no asumir que existen)

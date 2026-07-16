@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiExtraModels,
@@ -8,17 +16,22 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/core/guards/jwt-auth.guard';
 import { ResponseGeneralDto } from 'src/core/dto/responsegeneral.dto';
+import { GetFileIfcAllService } from '../../services/getfileifcall/getfileifcall.service';
 import { ProcessIfcService } from '../../services/processifc/processifc.service';
 import { ProcessIfcDto } from '../dto/int/process-ifc.dto';
+import { ResponseFileIfcDto } from '../dto/out/response-file-ifc.dto';
 import { ResponseProcessIfcDto } from '../dto/out/response-process-ifc.dto';
 
 @ApiTags('Process IFC')
-@ApiExtraModels(ResponseGeneralDto, ResponseProcessIfcDto)
+@ApiExtraModels(ResponseGeneralDto, ResponseProcessIfcDto, ResponseFileIfcDto)
 @Controller('process-ifc')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 export class ProcessIfcController {
-  constructor(private readonly processIfcService: ProcessIfcService) { }
+  constructor(
+    private readonly processIfcService: ProcessIfcService,
+    private readonly getFileIfcAllService: GetFileIfcAllService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -52,6 +65,33 @@ export class ProcessIfcController {
 
     return {
       mensaje: 'Archivo IFC procesado y almacenado exitosamente',
+      datos,
+    };
+  }
+
+  @Get('getFileIfcAll')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Listar archivos IFC cargados',
+    description:
+      'Entrega todos los registros de ref_files con el nombre del archivo y una URL HTTP ' +
+      'pública (storage) usable en navegador o librerías de renderizado 3D.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Archivos IFC consultados exitosamente',
+    schema: ResponseGeneralDto.swaggerSchema(ResponseFileIfcDto, {
+      isArray: true,
+      codresp: HttpStatus.OK,
+      mensaje: 'Archivos IFC consultados exitosamente',
+      status: true,
+    }),
+  })
+  async getFileIfcAll() {
+    const datos = await this.getFileIfcAllService.getFileIfcAll();
+
+    return {
+      mensaje: 'Archivos IFC consultados exitosamente',
       datos,
     };
   }

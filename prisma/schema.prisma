@@ -80,6 +80,15 @@ model tipo_servicios {
   @@schema("public")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ref_files {
+  id           Int    @id(map: "ref_files_pk") @default(autoincrement())
+  nom_file     String @db.VarChar
+  path_storage String @db.VarChar
+
+  @@schema("public")
+}
+
 view pg_stat_statements_info {
   dealloc     BigInt?
   stats_reset DateTime? @db.Timestamptz(6)

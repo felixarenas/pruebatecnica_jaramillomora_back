@@ -8,6 +8,7 @@ import { ClientesModule } from './modules/clientes/clientes.module';
 import { ServiciosModule } from './modules/servicios/servicios.module';
 import { ProcessIfcModule } from './modules/process-ifc/process-ifc.module';
 import { RedisModule } from './core/redis/redis.module';
+import { IfcProcessingModule } from './core/ifc-processing/ifc-processing.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RedisModule } from './core/redis/redis.module';
     ServiciosModule,
     ProcessIfcModule,
     RedisModule,
+    IfcProcessingModule
   ],
   providers: [
     {
@@ -26,4 +28,4 @@ import { RedisModule } from './core/redis/redis.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

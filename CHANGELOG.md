@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [17/07/2026 00:04:59] Add IFC processing pipeline (`IfcProcessingService`) that parses stored IFC files with web-ifc and persists modelo, agrupaciones, elementos, property sets, propiedades/parámetros and cantidades físicas
+- [17/07/2026 00:04:59] Add Prisma-backed repositories/modules for `modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro` and `cantidad_ifc`
+- [17/07/2026 00:04:59] Extend process-ifc API/controller to trigger IFC parse-and-persist after upload/listing flows
 - [15/07/2026 20:36:04] Add `GET process-ifc/getFileIfcAll` to list IFC files from `ref_files` with public `/storage` URLs for 3D viewers
 - [15/07/2026 20:36:04] Persist uploaded IFC metadata in Prisma model `ref_files` via repository/entity/mapper pattern
 - [15/07/2026 20:36:04] Serve `src/storage` as static assets at `/storage` and configure `CORS_ORIGINS` for Angular frontend access
@@ -18,5 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [17/07/2026 00:04:59] Reflect IFC domain tables in Prisma schema (`modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro`, `cantidad_ifc`)
 - [15/07/2026 20:36:04] Replace open CORS with explicit origins and add CORS headers on `/storage` for cross-origin IFC fetches
 - [15/07/2026 16:32:43] Raise Express body parser limit via BODY_LIMIT env and align .env.example SERVER_PORT with Docker API (3050)

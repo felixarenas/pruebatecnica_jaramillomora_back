@@ -4,6 +4,9 @@ import { AdminFile } from 'src/core/admin-file';
 import { ProcessIfcDto } from '../../controllers/dto/int/process-ifc.dto';
 import { ResponseProcessIfcDto } from '../../controllers/dto/out/response-process-ifc.dto';
 import { ProcessIfcRepository } from '../../interfaces/processifc.interfaces';
+import { IfcProcessingService } from 'src/core/ifc-processing/ifc-processing.service';
+import { IfcProcessByNamePayload, ProcessIfcResult } from 'src/core/ifc-processing/interfaces/ifc-processing.interface';
+import { RedisService } from 'src/core/redis/redis.service';
 
 /**
  * Caso de uso: decodificar un archivo IFC (u otra extensión) desde base64
@@ -17,7 +20,9 @@ export class ProcessIfcService {
   constructor(
     private readonly adminFile: AdminFile,
     private readonly processIfcRepository: ProcessIfcRepository,
-  ) {}
+    private readonly ifcProcessingService: IfcProcessingService,
+    private readonly redisService: RedisService,
+  ) { }
 
   async process(dto: ProcessIfcDto): Promise<ResponseProcessIfcDto> {
     const result = await this.adminFile.create(
@@ -45,5 +50,32 @@ export class ProcessIfcService {
       sizeBytes: result.sizeBytes,
       ext: result.ext,
     };
+  }
+
+  async processPropertySetsIfcFile(payload: IfcProcessByNamePayload): Promise<ProcessIfcResult> {
+
+    const nom_file = payload.nom_file;
+
+    if (!await this.adminFile.existFile(this.storagePath, nom_file)) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+    const data = await this.redisService.get<ProcessIfcResult>(`ifc_process_${nom_file}`);
+
+    if (data) {
+      return data;
+    }
+
+    await this.ifcProcessingService.onModuleInit();
+
+    const result = await this.ifcProcessingService.processIfcFile(payload);
+
+    await this.redisService.set(`ifc_process_${nom_file}`, result, 60 * 60 * 24);
+
+    return result;
+  }
+
+  async resetCache(): Promise<void> {
+    await this.redisService.reset();
   }
 }

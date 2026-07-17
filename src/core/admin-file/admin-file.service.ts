@@ -90,6 +90,10 @@ export class AdminFile {
     }
   }
 
+  async existFile(rutaArchivo: string, nameFile: string): Promise<boolean> {
+    return await this.valideExistFile(rutaArchivo, nameFile);
+  }
+
   /**
    * Valida si existe un archivo en una ruta específica.
    * @param ruta Ruta del archivo.

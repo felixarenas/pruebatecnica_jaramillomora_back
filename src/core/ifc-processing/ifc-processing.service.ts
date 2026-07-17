@@ -124,10 +124,11 @@ export class IfcProcessingService implements OnModuleInit {
             );
 
             const existingModel = await this.modeloIfcRepository.findByName(payload.nom_file);
-            if (existingModel) {
+            let modeloIfc = existingModel;
+            if (modeloIfc) {
 
                 const data: IfcProcessedData = {
-                    modelID,
+                    modelID: modeloIfc.id,
                     categorias,
                     elementosPorNivel,
                     materiales,
@@ -135,7 +136,7 @@ export class IfcProcessingService implements OnModuleInit {
 
                 return {
                     status: true,
-                    message: 'El modelo ya existe en la base de datos, se envio la informacion del modelo para actualizar',
+                    message: 'El modelo ya existe en la base de datos, se envio la informacion del modelo para graficarlo en la aplicacion',
                     data,
                 };
             }
@@ -155,146 +156,170 @@ export class IfcProcessingService implements OnModuleInit {
                 };
             }
 
-            const modeloIfc = await this.modeloIfcRepository.create(
+            modeloIfc = await this.modeloIfcRepository.create(
                 dataByTableModelo.data,
             );
             this.logger.log(
                 `Modelo IFC persistido: id=${modeloIfc.id}, archivo=${modeloIfc.nombreArchivo}`,
             );
 
-            const dataByTableAgrupacion =
-                await this.getInfoByTableAgrupacion_ifc(
-                    modeloIfc.id,
+            const existAgrupacionesIfc = await this.agrupacionIfcRepository.findByModeloId(modeloIfc!.id);
+            let agrupacionesIfc = existAgrupacionesIfc;
+            if (existAgrupacionesIfc.length == 0) {
+
+                const dataByTableAgrupacion =
+                    await this.getInfoByTableAgrupacion_ifc(
+                        modeloIfc!.id,
+                        modelID,
+                        spatialTree,
+                    );
+
+                if (!dataByTableAgrupacion.status || !dataByTableAgrupacion.data) {
+                    return {
+                        status: false,
+                        message:
+                            'No se pudo procesar el archivo en el storage: ' +
+                            dataByTableAgrupacion.message,
+                        data: {},
+                    };
+                }
+
+                agrupacionesIfc = await this.agrupacionIfcRepository.create(
+                    dataByTableAgrupacion.data,
+                );
+                this.logger.log(
+                    `Agrupaciones IFC persistidas: count=${agrupacionesIfc.length}, modelo_id=${modeloIfc!.id}`,
+                );
+            }
+
+            const existElementosIfc = await this.elementoIfcRepository.findByModeloId(modeloIfc!.id);
+            let elementosIfc = existElementosIfc;
+            if (existElementosIfc.length == 0) {
+                const dataByTableElemento = await this.getInfoByTableElemento_ifc(
+                    modeloIfc!.id,
                     modelID,
                     spatialTree,
+                    agrupacionesIfc,
                 );
 
-            if (!dataByTableAgrupacion.status || !dataByTableAgrupacion.data) {
-                return {
-                    status: false,
-                    message:
-                        'No se pudo procesar el archivo en el storage: ' +
-                        dataByTableAgrupacion.message,
-                    data: {},
-                };
-            }
+                if (!dataByTableElemento.status || !dataByTableElemento.data) {
+                    return {
+                        status: false,
+                        message:
+                            'No se pudo procesar el archivo en el storage: ' +
+                            dataByTableElemento.message,
+                        data: {},
+                    };
+                }
 
-            const agrupacionesIfc = await this.agrupacionIfcRepository.create(
-                dataByTableAgrupacion.data,
-            );
-            this.logger.log(
-                `Agrupaciones IFC persistidas: count=${agrupacionesIfc.length}, modelo_id=${modeloIfc.id}`,
-            );
-
-            const dataByTableElemento = await this.getInfoByTableElemento_ifc(
-                modeloIfc.id,
-                modelID,
-                spatialTree,
-                agrupacionesIfc,
-            );
-
-            if (!dataByTableElemento.status || !dataByTableElemento.data) {
-                return {
-                    status: false,
-                    message:
-                        'No se pudo procesar el archivo en el storage: ' +
-                        dataByTableElemento.message,
-                    data: {},
-                };
-            }
-
-            const elementosIfc = await this.elementoIfcRepository.create(
-                dataByTableElemento.data,
-            );
-            this.logger.log(
-                `Elementos IFC persistidos: count=${elementosIfc.length}, modelo_id=${modeloIfc.id}`,
-            );
-
-            const dataByTableProperty_set =
-                await this.getInfoByTableProperty_set(
-                    modelID,
-                    spatialTree,
-                    elementosIfc,
+                elementosIfc = await this.elementoIfcRepository.create(
+                    dataByTableElemento.data,
                 );
-
-            if (
-                !dataByTableProperty_set.status ||
-                !dataByTableProperty_set.data
-            ) {
-                return {
-                    status: false,
-                    message:
-                        'No se pudo procesar el archivo en el storage: ' +
-                        dataByTableProperty_set.message,
-                    data: {},
-                };
+                this.logger.log(
+                    `Elementos IFC persistidos: count=${elementosIfc.length}, modelo_id=${modeloIfc!.id}`,
+                );
             }
 
-            const propertySetsIfc = await this.propertySetIfcRepository.create(
-                dataByTableProperty_set.data,
-            );
-            this.logger.log(
-                `Property Sets IFC persistidos: count=${propertySetsIfc.length}, elementos=${elementosIfc.length}`,
-            );
+            const existPropertySetsIfc = await this.propertySetIfcRepository.findByElementoId(elementosIfc[0].id);
+            let propertySetsIfc = existPropertySetsIfc;
+            if (existPropertySetsIfc.length == 0) {
 
-            const dataByTablePropiedadParametro =
-                await this.getInfoByTablePropiedadParametro(
-                    modelID,
-                    spatialTree,
-                    elementosIfc,
-                    propertySetsIfc,
+                const dataByTableProperty_set =
+                    await this.getInfoByTableProperty_set(
+                        modelID,
+                        spatialTree,
+                        elementosIfc,
+                    );
+
+                if (
+                    !dataByTableProperty_set.status ||
+                    !dataByTableProperty_set.data
+                ) {
+                    return {
+                        status: false,
+                        message:
+                            'No se pudo procesar el archivo en el storage: ' +
+                            dataByTableProperty_set.message,
+                        data: {},
+                    };
+                }
+
+                propertySetsIfc = await this.propertySetIfcRepository.create(
+                    dataByTableProperty_set.data,
                 );
-
-            if (
-                !dataByTablePropiedadParametro.status ||
-                !dataByTablePropiedadParametro.data
-            ) {
-                return {
-                    status: false,
-                    message:
-                        'No se pudo procesar el archivo en el storage: ' +
-                        dataByTablePropiedadParametro.message,
-                    data: {},
-                };
+                this.logger.log(
+                    `Property Sets IFC persistidos: count=${propertySetsIfc.length}, elementos=${elementosIfc.length}`,
+                );
             }
 
-            const propiedadParametro =
-                await this.propiedadParametroRepository.create(
-                    dataByTablePropiedadParametro.data,
-                );
-            this.logger.log(
-                `Propiedad Parametro IFC persistidos: count=${propiedadParametro.length}, property_sets=${propertySetsIfc.length}`,
-            );
+            const existPropiedadesParametroIfc = await this.propiedadParametroRepository.findByPsetId(propertySetsIfc[0].id);
+            let propiedadParametro = existPropiedadesParametroIfc;
+            if (propiedadParametro.length == 0) {
 
-            const dataByTableCantidad_ifc =
-                await this.getInfoByTableCantidad_ifc(
-                    modelID,
-                    spatialTree,
-                    elementosIfc,
-                );
+                const dataByTablePropiedadParametro =
+                    await this.getInfoByTablePropiedadParametro(
+                        modelID,
+                        spatialTree,
+                        elementosIfc,
+                        propertySetsIfc,
+                    );
 
-            if (
-                !dataByTableCantidad_ifc.status ||
-                !dataByTableCantidad_ifc.data
-            ) {
-                return {
-                    status: false,
-                    message:
-                        'No se pudo procesar el archivo en el storage: ' +
-                        dataByTableCantidad_ifc.message,
-                    data: {},
-                };
+                if (
+                    !dataByTablePropiedadParametro.status ||
+                    !dataByTablePropiedadParametro.data
+                ) {
+                    return {
+                        status: false,
+                        message:
+                            'No se pudo procesar el archivo en el storage: ' +
+                            dataByTablePropiedadParametro.message,
+                        data: {},
+                    };
+                }
+
+                propiedadParametro =
+                    await this.propiedadParametroRepository.create(
+                        dataByTablePropiedadParametro.data,
+                    );
+                this.logger.log(
+                    `Propiedad Parametro IFC persistidos: count=${propiedadParametro.length}, property_sets=${propertySetsIfc.length}`,
+                );
             }
 
-            const cantidadIfc = await this.cantidadIfcRepository.create(
-                dataByTableCantidad_ifc.data,
-            );
-            this.logger.log(
-                `Cantidad IFC persistidos: count=${cantidadIfc.length}, elementos=${elementosIfc.length}`,
-            );
+            const existCantidadIfc = await this.cantidadIfcRepository.findByElementoId(elementosIfc[0].id);
+            let cantidadIfc = existCantidadIfc;
+            if (cantidadIfc.length == 0) {
+
+                const dataByTableCantidad_ifc =
+                    await this.getInfoByTableCantidad_ifc(
+                        modelID,
+                        spatialTree,
+                        elementosIfc,
+                    );
+
+                if (
+                    !dataByTableCantidad_ifc.status ||
+                    !dataByTableCantidad_ifc.data
+                ) {
+                    return {
+                        status: false,
+                        message:
+                            'No se pudo procesar el archivo en el storage: ' +
+                            dataByTableCantidad_ifc.message,
+                        data: {},
+                    };
+                }
+
+                cantidadIfc = await this.cantidadIfcRepository.create(
+                    dataByTableCantidad_ifc.data,
+                );
+                this.logger.log(
+                    `Cantidad IFC persistidos: count=${cantidadIfc.length}, elementos=${elementosIfc.length}`,
+                );
+            }
 
             const data: IfcProcessedData = {
-                modelID,
+                modelID: modeloIfc!.id,
                 categorias,
                 elementosPorNivel,
                 materiales,
@@ -330,7 +355,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param totalesElementos - Cantidad total de elementos contables
      * @returns Resultado con los datos listos para persistir
      */
-    async getInfoByTableModelo_ifc(
+    private async getInfoByTableModelo_ifc(
         payload: IfcProcessByNamePayload,
         modelID: number,
         totalesElementos: number,
@@ -426,7 +451,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param modelID - Identificador del modelo abierto en web-ifc
      * @param spatialTree - Estructura espacial del modelo
      */
-    async getInfoByTableAgrupacion_ifc(
+    private async getInfoByTableAgrupacion_ifc(
         modeloId: number,
         modelID: number,
         spatialTree: SpatialNode,
@@ -519,7 +544,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param spatialTree - Estructura espacial del modelo
      * @param agrupacionesIfc - Agrupaciones ya persistidas
      */
-    async getInfoByTableElemento_ifc(
+    private async getInfoByTableElemento_ifc(
         modeloId: number,
         modelID: number,
         spatialTree: SpatialNode,
@@ -724,7 +749,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param spatialTree - Estructura espacial del modelo
      * @param elementosIfc - Elementos ya persistidos (`elementoIfcRepository.create`)
      */
-    async getInfoByTableProperty_set(
+    private async getInfoByTableProperty_set(
         modelID: number,
         spatialTree: SpatialNode,
         elementosIfc: ElementoIfcEntity[],
@@ -860,7 +885,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param elementosIfc - Elementos ya persistidos
      * @param propertySetsIfc - Property sets ya persistidos (`propertySetIfcRepository.create`)
      */
-    async getInfoByTablePropiedadParametro(
+    private async getInfoByTablePropiedadParametro(
         modelID: number,
         spatialTree: SpatialNode,
         elementosIfc: ElementoIfcEntity[],
@@ -1165,7 +1190,7 @@ export class IfcProcessingService implements OnModuleInit {
      * @param spatialTree - Estructura espacial del modelo
      * @param elementosIfc - Elementos ya persistidos (`elementoIfcRepository.create`)
      */
-    async getInfoByTableCantidad_ifc(
+    private async getInfoByTableCantidad_ifc(
         modelID: number,
         spatialTree: SpatialNode,
         elementosIfc: ElementoIfcEntity[],
@@ -1187,25 +1212,18 @@ export class IfcProcessingService implements OnModuleInit {
                     continue;
                 }
 
-                let definitions: unknown[];
-                try {
-                    // getPropertySets también devuelve IfcElementQuantity;
-                    // recursive=true expande Quantities / HasQuantities
-                    definitions = await this.ifcApi.properties.getPropertySets(
+                // Combina Qto del elemento (RelDefinesByProperties) y del tipo
+                // (HasPropertySets) sin depender del flag includeTypeProperties de
+                // web-ifc, que falla con "HasPropertySets is not iterable".
+                const definitions =
+                    await this.getPropertyDefinitionsForElement(
                         modelID,
                         expressID,
                         true,
-                        true,
+                        `cantidades elemento id=${elemento.id} tipo=${elemento.tipoEntidadIfc}`,
                     );
-                } catch (error) {
-                    this.logger.warn(
-                        `No se pudieron leer cantidades del elemento id=${elemento.id} tipo=${elemento.tipoEntidadIfc}: ${error instanceof Error ? error.message : error
-                        }`,
-                    );
-                    continue;
-                }
 
-                for (const definition of definitions ?? []) {
+                for (const definition of definitions) {
                     if (!this.isElementQuantity(definition)) continue;
 
                     const cantidades =
@@ -1247,6 +1265,92 @@ export class IfcProcessingService implements OnModuleInit {
                 data: null,
             };
         }
+    }
+
+    /**
+     * Obtiene IfcPropertySet / IfcElementQuantity asociados a un elemento.
+     *
+     * web-ifc `getPropertySets(..., includeTypeProperties=true)` **solo** lee
+     * el tipo y hace `for..of` sobre `HasPropertySets` sin validar null →
+     * "HasPropertySets is not iterable". Aquí se leen:
+     * 1) definiciones del propio elemento (`includeTypeProperties=false`)
+     * 2) las del tipo, iterando `HasPropertySets` de forma segura
+     */
+    private async getPropertyDefinitionsForElement(
+        modelID: number,
+        expressID: number,
+        recursive: boolean,
+        contextLabel: string,
+    ): Promise<unknown[]> {
+        const results: unknown[] = [];
+        const seenExpressIds = new Set<number>();
+
+        const pushDefinition = (definition: unknown): void => {
+            if (!definition || typeof definition !== 'object') return;
+            const id = this.extractExpressId(definition);
+            if (id != null) {
+                if (seenExpressIds.has(id)) return;
+                seenExpressIds.add(id);
+            }
+            results.push(definition);
+        };
+
+        try {
+            const elementDefs =
+                await this.ifcApi.properties.getPropertySets(
+                    modelID,
+                    expressID,
+                    recursive,
+                    false,
+                );
+            for (const def of elementDefs ?? []) {
+                pushDefinition(def);
+            }
+        } catch (error) {
+            this.logger.warn(
+                `No se pudieron leer definiciones del elemento (${contextLabel}): ${error instanceof Error ? error.message : error
+                }`,
+            );
+        }
+
+        try {
+            const typeObjects =
+                await this.ifcApi.properties.getTypeProperties(
+                    modelID,
+                    expressID,
+                    false,
+                );
+            for (const typeObj of typeObjects ?? []) {
+                if (!typeObj || typeof typeObj !== 'object') continue;
+                const hasPropertySets = this.asArray(
+                    (typeObj as Record<string, unknown>).HasPropertySets,
+                );
+                for (const ref of hasPropertySets) {
+                    const psetId = this.extractExpressId(ref);
+                    if (psetId == null || seenExpressIds.has(psetId)) continue;
+                    try {
+                        const line = this.ifcApi.GetLine(
+                            modelID,
+                            psetId,
+                            recursive,
+                        );
+                        pushDefinition(line);
+                    } catch (error) {
+                        this.logger.warn(
+                            `No se pudo expandir definición expressID=${psetId} (${contextLabel}): ${error instanceof Error ? error.message : error
+                            }`,
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            this.logger.warn(
+                `No se pudieron leer definiciones del tipo (${contextLabel}): ${error instanceof Error ? error.message : error
+                }`,
+            );
+        }
+
+        return results;
     }
 
     /**

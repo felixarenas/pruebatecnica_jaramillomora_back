@@ -42,4 +42,28 @@ export class PrismaProcessIfcRepository implements ProcessIfcRepository {
   private mapToEntity(model: ref_files): RefFileEntity {
     return new RefFileEntity(model.id, model.nom_file, model.path_storage);
   }
+
+  async getElementsDBByIfcProcessNivel(id_process: number): Promise<any> {
+    try {
+      const model = await this.prisma.$queryRaw`
+        SELECT * FROM public.get_elementbynivel(${id_process})
+      `;
+
+      return model;
+    } catch (error) {
+      throw handleError(error);
+    }
+  }
+
+  async getElementsDBByIfcProcessCategory(id_process: number): Promise<any> {
+    try {
+      const model = await this.prisma.$queryRaw`
+        SELECT * FROM public.get_elementbycategory(${id_process})
+      `;
+
+      return model;
+    } catch (error) {
+      throw handleError(error);
+    }
+  }
 }

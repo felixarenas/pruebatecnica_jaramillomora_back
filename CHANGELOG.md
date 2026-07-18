@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [17/07/2026 22:23:10] Add `elementsDB` field to `IfcProcessedData` interface (defaulted to null in processing results)
 - [17/07/2026 15:04:30] Add Prisma indexes on `agrupacion_ifc.modelo_id`, `elemento_ifc.modelo_id`, `property_set.elemento_id`; drop unused `modelo_ifc.nombre_archivo` index
 - [17/07/2026 00:04:59] Reflect IFC domain tables in Prisma schema (`modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro`, `cantidad_ifc`)
 - [15/07/2026 20:36:04] Replace open CORS with explicit origins and add CORS headers on `/storage` for cross-origin IFC fetches
@@ -20,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [17/07/2026 22:23:10] Expose grouped IFC elements from DB in process-ifc: repository methods calling `get_elementbynivel`/`get_elementbycategory`, aggregated as `{ nivel, categoria }` into `elementsDB` on the processing result
 - [17/07/2026 00:04:59] Add IFC processing pipeline (`IfcProcessingService`) that parses stored IFC files with web-ifc and persists modelo, agrupaciones, elementos, property sets, propiedades/parámetros and cantidades físicas
 - [17/07/2026 00:04:59] Add Prisma-backed repositories/modules for `modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro` and `cantidad_ifc`
 - [17/07/2026 00:04:59] Extend process-ifc API/controller to trigger IFC parse-and-persist after upload/listing flows
@@ -29,3 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [15/07/2026 16:32:43] Add AdminFile core module and process-ifc endpoint to persist IFC/base64 uploads under src/storage, with configurable BODY_LIMIT for large JSON payloads
 - [14/07/2026 20:40:20] Initial NestJS backend with JWT auth, Prisma/PostgreSQL, Redis, and feature modules for users, clients, and services
 - [14/07/2026 20:40:20] Docker Compose stack (Postgres, Redis, API) with agent/developer docs (AGENTS.md, README.md) and project skills under .agents/
+
+### Removed
+
+- [17/07/2026 22:23:10] Remove `clientes` and `servicios` feature modules (controllers, services, repositories, DTOs, entities, mappers, interfaces) and unregister them from `AppModule`, narrowing the backend scope to the IFC pipeline

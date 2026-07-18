@@ -43,6 +43,7 @@ export interface IfcProcessedData {
   categorias: IfcCategoriaResumen[];
   elementosPorNivel: IfcElementosPorNivel[];
   materiales: IfcMaterialResumen[];
+  elementsDB: any;
 }
 
 /**

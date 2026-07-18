@@ -132,6 +132,7 @@ export class IfcProcessingService implements OnModuleInit {
                     categorias,
                     elementosPorNivel,
                     materiales,
+                    elementsDB: null
                 };
 
                 return {
@@ -323,6 +324,7 @@ export class IfcProcessingService implements OnModuleInit {
                 categorias,
                 elementosPorNivel,
                 materiales,
+                elementsDB: null
             };
 
             return {

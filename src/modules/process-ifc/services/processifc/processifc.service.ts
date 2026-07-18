@@ -70,6 +70,10 @@ export class ProcessIfcService {
 
     const result = await this.ifcProcessingService.processIfcFile(payload);
 
+    const elementsDB = await this.getElementsDBByIfcProcess(result.data.modelID);
+
+    result.data.elementsDB = elementsDB;
+
     await this.redisService.set(`ifc_process_${nom_file}`, result, 60 * 60 * 24);
 
     return result;
@@ -77,5 +81,15 @@ export class ProcessIfcService {
 
   async resetCache(): Promise<void> {
     await this.redisService.reset();
+  }
+
+  private async getElementsDBByIfcProcess(id_model: number): Promise<any> {
+    const elementsDBByIfcProcessNivel = await this.processIfcRepository.getElementsDBByIfcProcessNivel(id_model);
+    const elementsDBByIfcProcessCategory = await this.processIfcRepository.getElementsDBByIfcProcessCategory(id_model);
+
+    return {
+      "nivel": elementsDBByIfcProcessNivel,
+      "categoria": elementsDBByIfcProcessCategory,
+    };
   }
 }

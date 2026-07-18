@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [17/07/2026 23:57:31] Ship full DB init dump in `init-scripts/init-db.sql`: IFC schema (`modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro`, `cantidad_ifc`, `ref_files`) plus `ifc-spanish` table, the `get_elementbynivel`/`get_elementbycategory`/`get_ifcspanish`/`clean_parking_name` SQL functions, and seed data — resolves the previously documented missing SQL functions debt
 - [17/07/2026 22:23:10] Expose grouped IFC elements from DB in process-ifc: repository methods calling `get_elementbynivel`/`get_elementbycategory`, aggregated as `{ nivel, categoria }` into `elementsDB` on the processing result
 - [17/07/2026 00:04:59] Add IFC processing pipeline (`IfcProcessingService`) that parses stored IFC files with web-ifc and persists modelo, agrupaciones, elementos, property sets, propiedades/parámetros and cantidades físicas
 - [17/07/2026 00:04:59] Add Prisma-backed repositories/modules for `modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro` and `cantidad_ifc`

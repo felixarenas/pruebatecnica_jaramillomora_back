@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [17/07/2026 23:44:33] Rewrite AGENTS.md and README.md to reflect the IFC processing pipeline: layered architecture diagrams (Mermaid), IFC sequence and ER diagrams, current endpoints, known SQL functions debt, and remove the obsolete `clientes`/`servicios` documentation
+- [17/07/2026 23:44:33] Align `.env.example` defaults (DB host/port/credentials, `DATABASE_URL`, `REDIS_COMMANDER_PORT`) with the current Docker Compose and local dev setup
+- [17/07/2026 23:44:33] Regenerate embedded README (`src/core/docs/readme.generated.ts`) via `docs:build`
 - [17/07/2026 22:23:10] Add `elementsDB` field to `IfcProcessedData` interface (defaulted to null in processing results)
 - [17/07/2026 15:04:30] Add Prisma indexes on `agrupacion_ifc.modelo_id`, `elemento_ifc.modelo_id`, `property_set.elemento_id`; drop unused `modelo_ifc.nombre_archivo` index
 - [17/07/2026 00:04:59] Reflect IFC domain tables in Prisma schema (`modelo_ifc`, `agrupacion_ifc`, `elemento_ifc`, `property_set`, `propiedad_parametro`, `cantidad_ifc`)
